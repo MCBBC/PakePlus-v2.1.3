@@ -1,32 +1,1699 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <link rel="stylesheet" href="styles.css" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>PakePlus App</title>
-        <script type="module" src="/main.js" defer></script>
-    </head>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能密码管理助手</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <!-- 统一的 Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1a56db',
+                        secondary: '#e2e8f0',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                        dark: '#1e293b',
+                        light: '#f8fafc'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .glass-effect {
+                @apply bg-white bg-opacity-20 backdrop-blur-lg;
+            }
+            .card-shadow {
+                @apply shadow-lg hover:shadow-xl transition-shadow duration-300;
+            }
+            .btn-primary {
+                @apply bg-primary hover:bg-primary/90 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 focus:ring-2 focus:ring-primary/50 focus:outline-none;
+            }
+            .btn-secondary {
+                @apply bg-secondary hover:bg-secondary/90 text-dark font-medium py-2 px-4 rounded-lg transition-all duration-300 focus:ring-2 focus:ring-secondary/50 focus:outline-none;
+            }
+            .input-field {
+                @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300;
+            }
+            .nav-item {
+                @apply flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 cursor-pointer;
+            }
+            .nav-item.active {
+                @apply bg-primary text-white;
+            }
+            .nav-item:not(.active) {
+                @apply hover:bg-gray-100;
+            }
+            .password-strength-0 {
+                @apply bg-gray-300;
+            }
+            .password-strength-1 {
+                @apply bg-red-500;
+            }
+            .password-strength-2 {
+                @apply bg-red-400;
+            }
+            .password-strength-3 {
+                @apply bg-yellow-500;
+            }
+            .password-strength-4 {
+                @apply bg-yellow-400;
+            }
+            .password-strength-5 {
+                @apply bg-green-500;
+            }
+            .tooltip {
+                @apply invisible absolute z-10 py-1 px-2 bg-dark text-white text-xs rounded opacity-0 transition-opacity duration-300 whitespace-nowrap;
+            }
+            .has-tooltip:hover .tooltip {
+                @apply visible opacity-100;
+            }
+            .clickable-copy {
+                @apply cursor-pointer border-b border-dashed border-gray-400 hover:border-primary transition-colors duration-200;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen font-sans text-gray-800">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- 顶部标题和安全提示 -->
+        <header class="mb-8">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold text-primary flex items-center gap-2">
+                        <i class="fa fa-key"></i> 智能密码管理助手
+                    </h1>
+                    <p class="text-gray-600 mt-1">安全、高效地管理您的所有密码</p>
+                </div>
+                <div id="security-tip" class="bg-white rounded-lg p-3 shadow-md flex items-center gap-2 w-full md:w-auto">
+                    <i class="fa fa-info-circle text-primary"></i>
+                    <p class="text-sm">今日安全提示: 使用不同密码保护您的重要账户</p>
+                </div>
+            </div>
+        </header>
 
-    <body>
-        <main class="container">
-            <h1>Welcome to PakePlus</h1>
-            <form class="row" id="greet-form">
-                <input id="inputValue" placeholder="Enter a something..." />
-            </form>
-            <div class="resultBox">
-                <span>result: </span>
-                <span id="result"></span>
-            </div>
-            <div class="invokeBox">
-                <button id="openUrl">open_url_browser</button>
-                <button id="openUrlNew">open_url_new</button>
-                <button id="runCommand">run_command</button>
-                <button id="downloadFile">download_file</button>
-                <button id="getExeDir">get_exe_dir</button>
-                <button id="getEnvVar">get_env_var</button>
-                <button id="findPort">find_port</button>
-            </div>
-        </main>
-    </body>
+        <!-- 主内容区 -->
+        <div class="flex flex-col lg:flex-row gap-6">
+            <!-- 左侧导航 -->
+            <aside class="lg:w-64 bg-white rounded-xl shadow-md p-4 h-fit">
+                <nav>
+                    <ul class="space-y-2">
+                        <li>
+                            <a href="#password-generator" class="nav-item active" data-section="password-generator">
+                                <i class="fa fa-random w-5 text-center"></i>
+                                <span>密码生成</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#password-storage" class="nav-item" data-section="password-storage">
+                                <i class="fa fa-database w-5 text-center"></i>
+                                <span>密码存储</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#password-checker" class="nav-item" data-section="password-checker">
+                                <i class="fa fa-shield w-5 text-center"></i>
+                                <span>安全评估</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#password-health" class="nav-item" data-section="password-health">
+                                <i class="fa fa-heartbeat w-5 text-center"></i>
+                                <span>健康报告</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                
+                <div class="mt-8 p-4 bg-blue-50 rounded-lg">
+                    <h3 class="font-medium text-primary mb-2 flex items-center gap-2">
+                        <i class="fa fa-lightbulb-o"></i> 密码安全小知识
+                    </h3>
+                    <p class="text-sm text-gray-600" id="security-tip-content">
+                        理想的密码应至少包含12个字符，并混合使用大小写字母、数字和特殊符号。
+                    </p>
+                </div>
+            </aside>
+
+            <!-- 右侧主内容 -->
+            <main class="flex-1">
+                <!-- 密码生成器 -->
+                <section id="password-generator" class="section-content bg-white rounded-xl shadow-md p-6 mb-6">
+                    <h2 class="text-2xl font-bold mb-6 text-primary flex items-center gap-2">
+                        <i class="fa fa-random"></i> 密码生成器
+                    </h2>
+                    
+                    <form id="generate-form" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="platform" class="block text-sm font-medium text-gray-700 mb-1">目标平台</label>
+                                <input type="text" id="platform" name="platform" placeholder="例如: GitHub, Gmail" class="input-field">
+                            </div>
+                            <div>
+                                <label for="length" class="block text-sm font-medium text-gray-700 mb-1">密码长度</label>
+                                <div class="flex items-center gap-3">
+                                    <input type="range" id="length" name="length" min="8" max="32" value="12" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                                    <span id="length-value" class="text-sm font-medium min-w-[3rem] text-center">12</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="uppercase" name="uppercase" checked class="w-4 h-4 text-primary focus:ring-primary rounded">
+                                <label for="uppercase" class="text-sm font-medium text-gray-700">包含大写字母</label>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="lowercase" name="lowercase" checked class="w-4 h-4 text-primary focus:ring-primary rounded">
+                                <label for="lowercase" class="text-sm font-medium text-gray-700">包含小写字母</label>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="numbers" name="numbers" checked class="w-4 h-4 text-primary focus:ring-primary rounded">
+                                <label for="numbers" class="text-sm font-medium text-gray-700">包含数字</label>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="symbols" name="symbols" checked class="w-4 h-4 text-primary focus:ring-primary rounded">
+                                <label for="symbols" class="text-sm font-medium text-gray-700">包含特殊字符</label>
+                            </div>
+                        </div>
+                        
+                        <div class="pt-2">
+                            <button type="submit" class="btn-primary w-full md:w-auto">
+                                <i class="fa fa-magic mr-2"></i> 生成密码
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div id="password-result" class="mt-6 hidden">
+                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                <div class="flex-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">生成的密码</label>
+                                    <div class="flex items-center">
+                                        <input type="text" id="generated-password" readonly class="input-field pr-10" value="">
+                                        <button id="copy-btn" class="ml-[-2.5rem] text-gray-500 hover:text-primary transition-colors">
+                                            <i class="fa fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <button id="save-password-btn" class="btn-secondary">
+                                        <i class="fa fa-save mr-2"></i> 保存密码
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">密码强度</label>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                        <div id="strength-bar" class="h-2.5 rounded-full password-strength-0" style="width: 0%"></div>
+                                    </div>
+                                    <span id="strength-text" class="text-sm font-medium min-w-[5rem] text-center">弱</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">复杂度说明</label>
+                                <ul id="complexity-list" class="text-sm text-gray-600 space-y-1">
+                                    <!-- 复杂度说明将在这里动态生成 -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 密码存储 -->
+                <section id="password-storage" class="section-content bg-white rounded-xl shadow-md p-6 mb-6 hidden">
+                    <h2 class="text-2xl font-bold mb-6 text-primary flex items-center gap-2">
+                        <i class="fa fa-database"></i> 密码存储
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- 左侧：添加新密码 -->
+                        <div class="lg:col-span-1">
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <h3 class="font-medium text-lg mb-4">添加新密码</h3>
+                                
+                                <form id="storage-form" class="space-y-3">
+                                    <div>
+                                        <label for="storage-platform" class="block text-sm font-medium text-gray-700 mb-1">平台名称</label>
+                                        <input type="text" id="storage-platform" name="storage-platform" placeholder="例如: GitHub, Gmail" class="input-field">
+                                    </div>
+                                    
+                                    <div>
+                                        <label for="storage-username" class="block text-sm font-medium text-gray-700 mb-1">用户名/邮箱</label>
+                                        <input type="text" id="storage-username" name="storage-username" placeholder="您的用户名或邮箱" class="input-field">
+                                    </div>
+                                    
+                                    <div>
+                                        <label for="storage-password" class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                                        <div class="relative">
+                                            <input type="password" id="storage-password" name="storage-password" placeholder="输入密码" class="input-field pr-10">
+                                            <button type="button" id="toggle-password" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-primary transition-colors">
+                                                <i class="fa fa-eye-slash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <label for="storage-notes" class="block text-sm font-medium text-gray-700 mb-1">备注 (可选)</label>
+                                        <textarea id="storage-notes" name="storage-notes" rows="2" placeholder="添加备注信息" class="input-field"></textarea>
+                                    </div>
+                                    
+                                    <div class="pt-2">
+                                        <button type="submit" class="btn-primary w-full">
+                                            <i class="fa fa-plus mr-2"></i> 添加密码
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <div class="mt-6 bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                                <h3 class="font-medium text-yellow-800 mb-2 flex items-center gap-2">
+                                    <i class="fa fa-exclamation-triangle"></i> 安全提示
+                                </h3>
+                                <p class="text-sm text-yellow-700">
+                                    本工具仅在本地存储密码信息，不会上传至任何服务器。为了更高的安全性，建议使用专业的密码管理软件。
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <!-- 右侧：密码列表 -->
+                        <div class="lg:col-span-2">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-medium text-lg">已保存的密码</h3>
+                                <div class="flex items-center gap-2">
+                                    <div class="relative">
+                                        <input type="text" id="search-passwords" placeholder="搜索平台或用户名" class="w-full px-4 py-1.5 pl-10 pr-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300 text-sm">
+                                        <i class="fa fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                                    </div>
+                                    <button id="clear-all" class="text-sm text-gray-500 hover:text-danger transition-colors">
+                                        <i class="fa fa-trash-o mr-1"></i> 清空
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div id="passwords-container" class="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-100">
+                                            <tr>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">平台</th>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户名/邮箱</th>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">密码</th>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">备注</th>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="passwords-list" class="bg-white divide-y divide-gray-200">
+                                            <!-- 密码列表将在这里动态生成 -->
+                                            <tr class="text-center text-gray-500">
+                                                <td colspan="5" class="px-6 py-10">暂无保存的密码</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div id="export-import" class="mt-6 flex flex-col sm:flex-row gap-4">
+                                <button id="export-passwords" class="btn-secondary flex-1">
+                                    <i class="fa fa-download mr-2"></i> 导出密码
+                                </button>
+                                <button id="import-passwords" class="btn-secondary flex-1">
+                                    <i class="fa fa-upload mr-2"></i> 导入密码
+                                </button>
+                                <input type="file" id="import-file" accept=".json" class="hidden">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 密码安全评估 -->
+                <section id="password-checker" class="section-content bg-white rounded-xl shadow-md p-6 mb-6 hidden">
+                    <h2 class="text-2xl font-bold mb-6 text-primary flex items-center gap-2">
+                        <i class="fa fa-shield"></i> 密码安全评估
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- 左侧：密码评估表单 -->
+                        <div class="lg:col-span-1">
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <h3 class="font-medium text-lg mb-4">评估密码强度</h3>
+                                
+                                <form id="checker-form" class="space-y-3">
+                                    <div>
+                                        <label for="check-password" class="block text-sm font-medium text-gray-700 mb-1">输入密码</label>
+                                        <div class="relative">
+                                            <input type="password" id="check-password" name="check-password" placeholder="输入要评估的密码" class="input-field pr-10">
+                                            <button type="button" id="toggle-check-password" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-primary transition-colors">
+                                                <i class="fa fa-eye-slash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="pt-2">
+                                        <button type="submit" class="btn-primary w-full">
+                                            <i class="fa fa-check-circle mr-2"></i> 评估密码
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <div class="mt-6 bg-blue-50 rounded-lg p-4 border border-blue-200">
+                                <h3 class="font-medium text-blue-800 mb-2 flex items-center gap-2">
+                                    <i class="fa fa-info-circle"></i> 如何创建强密码
+                                </h3>
+                                <ul class="text-sm text-blue-700 space-y-2">
+                                    <li class="flex items-start gap-2">
+                                        <i class="fa fa-check-circle text-blue-500 mt-0.5"></i>
+                                        <span>使用至少12个字符</span>
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <i class="fa fa-check-circle text-blue-500 mt-0.5"></i>
+                                        <span>混合使用大小写字母、数字和特殊字符</span>
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <i class="fa fa-check-circle text-blue-500 mt-0.5"></i>
+                                        <span>避免使用常见单词、姓名或生日</span>
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <i class="fa fa-check-circle text-blue-500 mt-0.5"></i>
+                                        <span>不要使用连续字符（如12345或abcde）</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <!-- 右侧：评估结果 -->
+                        <div class="lg:col-span-2">
+                            <div id="checker-result" class="hidden">
+                                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-6">
+                                    <h3 class="font-medium text-lg mb-4">评估结果</h3>
+                                    
+                                    <div class="flex flex-col md:flex-row gap-6">
+                                        <div class="flex-1">
+                                            <div class="mb-4">
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">密码强度评分</label>
+                                                <div class="flex items-center gap-3">
+                                                    <div class="w-full bg-gray-200 rounded-full h-3">
+                                                        <div id="checker-strength-bar" class="h-3 rounded-full password-strength-0" style="width: 0%"></div>
+                                                    </div>
+                                                    <span id="checker-score" class="text-lg font-bold min-w-[3rem] text-center">0</span>
+                                                </div>
+                                                <p id="checker-strength-text" class="text-sm mt-1 text-center">弱</p>
+                                            </div>
+                                            
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">密码复杂度分析</label>
+                                                <div class="grid grid-cols-2 gap-2 mt-2">
+                                                    <div class="flex items-center gap-2">
+                                                        <i id="has-uppercase" class="fa fa-times-circle text-gray-400"></i>
+                                                        <span class="text-sm">大写字母</span>
+                                                    </div>
+                                                    <div class="flex items-center gap-2">
+                                                        <i id="has-lowercase" class="fa fa-times-circle text-gray-400"></i>
+                                                        <span class="text-sm">小写字母</span>
+                                                    </div>
+                                                    <div class="flex items-center gap-2">
+                                                        <i id="has-numbers" class="fa fa-times-circle text-gray-400"></i>
+                                                        <span class="text-sm">数字</span>
+                                                    </div>
+                                                    <div class="flex items-center gap-2">
+                                                        <i id="has-symbols" class="fa fa-times-circle text-gray-400"></i>
+                                                        <span class="text-sm">特殊字符</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="flex-1">
+                                            <canvas id="checker-chart" width="300" height="300"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div id="risk-warnings" class="bg-red-50 rounded-lg p-4 border border-red-200">
+                                        <h3 class="font-medium text-red-800 mb-2 flex items-center gap-2">
+                                            <i class="fa fa-exclamation-triangle"></i> 风险提示
+                                        </h3>
+                                        <ul id="risk-list" class="text-sm text-red-700 space-y-2">
+                                            <!-- 风险提示将在这里动态生成 -->
+                                        </ul>
+                                    </div>
+                                    
+                                    <div id="improvement-suggestions" class="bg-green-50 rounded-lg p-4 border border-green-200">
+                                        <h3 class="font-medium text-green-800 mb-2 flex items-center gap-2">
+                                            <i class="fa fa-lightbulb-o"></i> 优化建议
+                                        </h3>
+                                        <ul id="suggestion-list" class="text-sm text-green-700 space-y-2">
+                                            <!-- 优化建议将在这里动态生成 -->
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="checker-empty" class="bg-gray-50 rounded-lg p-10 border border-gray-200 text-center">
+                                <i class="fa fa-lock text-5xl text-gray-300 mb-4"></i>
+                                <h3 class="font-medium text-lg mb-2">输入密码进行安全评估</h3>
+                                <p class="text-gray-500">我们将分析密码强度并提供改进建议</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 密码健康报告 -->
+                <section id="password-health" class="section-content bg-white rounded-xl shadow-md p-6 mb-6 hidden">
+                    <h2 class="text-2xl font-bold mb-6 text-primary flex items-center gap-2">
+                        <i class="fa fa-heartbeat"></i> 密码健康报告
+                    </h2>
+                    
+                    <div id="health-empty" class="bg-gray-50 rounded-lg p-10 border border-gray-200 text-center">
+                        <i class="fa fa-bar-chart text-5xl text-gray-300 mb-4"></i>
+                        <h3 class="font-medium text-lg mb-2">暂无密码数据</h3>
+                        <p class="text-gray-500">保存一些密码后即可查看健康报告</p>
+                        <button id="go-to-storage" class="btn-primary mt-4">
+                            <i class="fa fa-plus mr-2"></i> 添加密码
+                        </button>
+                    </div>
+                    
+                    <div id="health-report" class="hidden">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                                <h3 class="font-medium text-blue-800 mb-1">已保存密码</h3>
+                                <p id="total-passwords" class="text-3xl font-bold text-blue-600">0</p>
+                            </div>
+                            <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+                                <h3 class="font-medium text-green-800 mb-1">强密码</h3>
+                                <p id="strong-passwords" class="text-3xl font-bold text-green-600">0</p>
+                            </div>
+                            <div class="bg-red-50 rounded-lg p-4 border border-red-200">
+                                <h3 class="font-medium text-red-800 mb-1">弱密码</h3>
+                                <p id="weak-passwords" class="text-3xl font-bold text-red-600">0</p>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div>
+                                <h3 class="font-medium text-lg mb-4">密码强度分布</h3>
+                                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 h-64">
+                                    <canvas id="strength-chart"></canvas>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="font-medium text-lg mb-4">平台密码安全状况</h3>
+                                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 h-64 overflow-y-auto">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-100">
+                                            <tr>
+                                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">平台</th>
+                                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">强度</th>
+                                                <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">建议</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="platform-health-list" class="bg-white divide-y divide-gray-200">
+                                            <!-- 平台健康状况将在这里动态生成 -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                            <h3 class="font-medium text-yellow-800 mb-2 flex items-center gap-2">
+                                <i class="fa fa-lightbulb-o"></i> 整体安全建议
+                            </h3>
+                            <ul id="health-suggestions" class="text-sm text-yellow-700 space-y-2">
+                                <!-- 整体安全建议将在这里动态生成 -->
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+
+        <!-- 页脚 -->
+        <footer class="mt-12 text-center text-gray-500 text-sm">
+            <p>© 2025 智能密码管理助手 | 保护您的数字安全</p>
+            <p class="mt-1">本工具仅在本地运行，不会上传您的任何数据</p>
+        </footer>
+    </div>
+
+    <!-- 通知提示 -->
+    <div id="notification" class="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-4 transform translate-y-full opacity-0 transition-all duration-300 flex items-center gap-3 max-w-sm">
+        <i id="notification-icon" class="fa fa-check-circle text-success text-xl"></i>
+        <p id="notification-message">操作成功</p>
+        <button id="close-notification" class="ml-auto text-gray-400 hover:text-gray-600">
+            <i class="fa fa-times"></i>
+        </button>
+    </div>
+
+    <script>
+        // 全局变量
+        let passwords = [];
+        let currentSection = 'password-generator';
+        let securityTips = [
+            "今日安全提示: 使用不同密码保护您的重要账户",
+            "今日安全提示: 定期更换密码可以提高账户安全性",
+            "今日安全提示: 避免在多个网站使用相同的密码",
+            "今日安全提示: 不要使用生日、姓名等容易被猜到的信息作为密码",
+            "今日安全提示: 考虑使用密码管理器来安全存储您的密码"
+        ];
+        let securityKnowledge = [
+            "理想的密码应至少包含12个字符，并混合使用大小写字母、数字和特殊符号。",
+            "避免使用常见单词或键盘序列（如'password'或'qwerty'）作为密码。",
+            "定期更换密码，特别是对于电子邮件、银行账户等重要账户。",
+            "使用双因素认证可以为您的账户提供额外的安全保障。",
+            "不要在不安全的网站上输入您的密码，确保网址以'https://'开头。"
+        ];
+        let commonPasswords = [
+            "123456", "password", "123456789", "12345678", "12345", "qwerty", 
+            "123123", "111111", "abc123", "1234567890", "password1", "admin", 
+            "welcome", "monkey", "login", "letmein", "1234567", "football", 
+            "123qwe", "000000", "qwerty123", "dragon", "baseball", "sunshine", 
+            "iloveyou", "trustno1", "princess", "adobe123", "123abc", "football1"
+        ];
+
+        // DOM 加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化
+            initNavigation();
+            initPasswordGenerator();
+            initPasswordStorage();
+            initPasswordChecker();
+            initPasswordHealth();
+            initNotification();
+            
+            // 加载保存的密码
+            loadPasswords();
+            
+            // 更新安全提示
+            updateSecurityTip();
+            
+            // 显示初始部分
+            showSection(currentSection);
+        });
+
+        // 初始化导航
+        function initNavigation() {
+            const navItems = document.querySelectorAll('.nav-item');
+            
+            navItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const section = this.getAttribute('data-section');
+                    showSection(section);
+                });
+            });
+        }
+
+        // 显示指定部分
+        function showSection(section) {
+            // 更新当前部分
+            currentSection = section;
+            
+            // 更新导航项状态
+            document.querySelectorAll('.nav-item').forEach(item => {
+                if (item.getAttribute('data-section') === section) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+            
+            // 隐藏所有部分
+            document.querySelectorAll('.section-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            // 显示选定部分
+            document.getElementById(section).classList.remove('hidden');
+            
+            // 如果是健康报告部分，更新报告
+            if (section === 'password-health') {
+                updateHealthReport();
+            }
+        }
+
+        // 初始化密码生成器
+        function initPasswordGenerator() {
+            const generateForm = document.getElementById('generate-form');
+            const lengthInput = document.getElementById('length');
+            const lengthValue = document.getElementById('length-value');
+            const passwordResult = document.getElementById('password-result');
+            const generatedPassword = document.getElementById('generated-password');
+            const copyBtn = document.getElementById('copy-btn');
+            const savePasswordBtn = document.getElementById('save-password-btn');
+            
+            // 更新密码长度显示
+            lengthInput.addEventListener('input', function() {
+                lengthValue.textContent = this.value;
+            });
+            
+            // 生成密码表单提交
+            generateForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const length = parseInt(document.getElementById('length').value);
+                const includeUppercase = document.getElementById('uppercase').checked;
+                const includeLowercase = document.getElementById('lowercase').checked;
+                const includeNumbers = document.getElementById('numbers').checked;
+                const includeSymbols = document.getElementById('symbols').checked;
+                
+                // 确保至少选择了一种字符类型
+                if (!includeUppercase && !includeLowercase && !includeNumbers && !includeSymbols) {
+                    showNotification('请至少选择一种字符类型', 'error');
+                    return;
+                }
+                
+                // 生成密码
+                const password = generatePassword(length, includeUppercase, includeLowercase, includeNumbers, includeSymbols);
+                
+                // 显示结果
+                generatedPassword.value = password;
+                passwordResult.classList.remove('hidden');
+                
+                // 评估密码强度
+                const strength = evaluatePasswordStrength(password);
+                updatePasswordStrength(strength);
+                
+                // 显示复杂度说明
+                showComplexityInfo(password);
+            });
+            
+            // 复制密码
+            copyBtn.addEventListener('click', function() {
+                const password = generatedPassword.value;
+                copyToClipboard(password);
+                showNotification('密码已复制到剪贴板');
+            });
+            
+            // 保存密码
+            savePasswordBtn.addEventListener('click', function() {
+                const platform = document.getElementById('platform').value.trim();
+                const password = generatedPassword.value;
+                
+                if (!platform) {
+                    showNotification('请输入平台名称', 'error');
+                    return;
+                }
+                
+                // 切换到存储部分
+                showSection('password-storage');
+                
+                // 填充表单
+                document.getElementById('storage-platform').value = platform;
+                document.getElementById('storage-password').value = password;
+                
+                // 滚动到表单
+                document.getElementById('storage-form').scrollIntoView({ behavior: 'smooth' });
+            });
+        }
+
+        // 生成随机密码
+        function generatePassword(length, includeUppercase, includeLowercase, includeNumbers, includeSymbols) {
+            const uppercaseChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const lowercaseChars = 'abcdefghijklmnopqrstuvwxyz';
+            const numberChars = '0123456789';
+            const symbolChars = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+            
+            let chars = '';
+            let password = '';
+            
+            // 添加选定的字符集
+            if (includeUppercase) chars += uppercaseChars;
+            if (includeLowercase) chars += lowercaseChars;
+            if (includeNumbers) chars += numberChars;
+            if (includeSymbols) chars += symbolChars;
+            
+            // 生成密码
+            for (let i = 0; i < length; i++) {
+                const randomIndex = Math.floor(Math.random() * chars.length);
+                password += chars[randomIndex];
+            }
+            
+            return password;
+        }
+
+        // 评估密码强度
+        function evaluatePasswordStrength(password) {
+            let score = 0;
+            
+            // 长度评分
+            if (password.length >= 8) score += 1;
+            if (password.length >= 12) score += 1;
+            if (password.length >= 16) score += 1;
+            
+            // 字符多样性评分
+            if (/[A-Z]/.test(password)) score += 1;
+            if (/[a-z]/.test(password)) score += 1;
+            if (/[0-9]/.test(password)) score += 1;
+            if (/[^A-Za-z0-9]/.test(password)) score += 1;
+            
+            // 常见密码检查
+            if (commonPasswords.includes(password.toLowerCase())) score = Math.max(0, score - 3);
+            
+            // 连续字符检查
+            if (/(\w)\1{2,}/.test(password)) score = Math.max(0, score - 1);
+            if (/123|abc|qwerty|asdf|zxcv/.test(password.toLowerCase())) score = Math.max(0, score - 1);
+            
+            // 归一化到 0-5 分
+            return Math.min(5, Math.max(0, Math.ceil(score / 2)));
+        }
+
+        // 更新密码强度显示
+        function updatePasswordStrength(strength) {
+            const strengthBar = document.getElementById('strength-bar');
+            const strengthText = document.getElementById('strength-text');
+            
+            // 更新进度条
+            strengthBar.className = `h-2.5 rounded-full password-strength-${strength}`;
+            strengthBar.style.width = `${strength * 20}%`;
+            
+            // 更新文本
+            const strengthLabels = ['弱', '较弱', '中等', '较强', '强', '非常强'];
+            strengthText.textContent = strengthLabels[strength];
+            
+            // 更新颜色
+            const strengthColors = ['text-red-500', 'text-orange-500', 'text-yellow-500', 'text-green-400', 'text-green-500', 'text-green-600'];
+            strengthText.className = `text-sm font-medium min-w-[5rem] text-center ${strengthColors[strength]}`;
+        }
+
+        // 显示密码复杂度信息
+        function showComplexityInfo(password) {
+            const complexityList = document.getElementById('complexity-list');
+            complexityList.innerHTML = '';
+            
+            // 长度信息
+            const lengthItem = document.createElement('li');
+            lengthItem.innerHTML = `<i class="fa fa-check-circle text-success mr-2"></i> 长度: ${password.length} 字符`;
+            complexityList.appendChild(lengthItem);
+            
+            // 字符类型信息
+            const hasUppercase = /[A-Z]/.test(password);
+            const hasLowercase = /[a-z]/.test(password);
+            const hasNumbers = /[0-9]/.test(password);
+            const hasSymbols = /[^A-Za-z0-9]/.test(password);
+            
+            const typesItem = document.createElement('li');
+            let typesText = '包含: ';
+            let typesCount = 0;
+            
+            if (hasUppercase) {
+                typesText += '大写字母, ';
+                typesCount++;
+            }
+            if (hasLowercase) {
+                typesText += '小写字母, ';
+                typesCount++;
+            }
+            if (hasNumbers) {
+                typesText += '数字, ';
+                typesCount++;
+            }
+            if (hasSymbols) {
+                typesText += '特殊字符, ';
+                typesCount++;
+            }
+            
+            typesText = typesText.slice(0, -2); // 移除最后一个逗号和空格
+            typesItem.innerHTML = `<i class="fa fa-check-circle text-success mr-2"></i> ${typesText} (${typesCount} 种类型)`;
+            complexityList.appendChild(typesItem);
+            
+            // 唯一性信息
+            const uniquenessItem = document.createElement('li');
+            const uniqueChars = new Set(password).size;
+            const uniqueness = (uniqueChars / password.length * 100).toFixed(1);
+            uniquenessItem.innerHTML = `<i class="fa fa-check-circle text-success mr-2"></i> 唯一性: ${uniqueChars} 个不同字符 (${uniqueness}%)`;
+            complexityList.appendChild(uniquenessItem);
+        }
+
+        // 初始化密码存储
+        function initPasswordStorage() {
+            const storageForm = document.getElementById('storage-form');
+            const togglePassword = document.getElementById('toggle-password');
+            const storagePassword = document.getElementById('storage-password');
+            const searchPasswords = document.getElementById('search-passwords');
+            const clearAll = document.getElementById('clear-all');
+            const exportPasswords = document.getElementById('export-passwords');
+            const importPasswords = document.getElementById('import-passwords');
+            const importFile = document.getElementById('import-file');
+            
+            // 切换密码可见性
+            togglePassword.addEventListener('click', function() {
+                const type = storagePassword.getAttribute('type') === 'password' ? 'text' : 'password';
+                storagePassword.setAttribute('type', type);
+                this.innerHTML = type === 'password' ? '<i class="fa fa-eye-slash"></i>' : '<i class="fa fa-eye"></i>';
+            });
+            
+            // 存储密码表单提交
+            storageForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const platform = document.getElementById('storage-platform').value.trim();
+                const username = document.getElementById('storage-username').value.trim();
+                const password = document.getElementById('storage-password').value;
+                const notes = document.getElementById('storage-notes').value.trim();
+                
+                if (!platform) {
+                    showNotification('请输入平台名称', 'error');
+                    return;
+                }
+                
+                if (!username) {
+                    showNotification('请输入用户名或邮箱', 'error');
+                    return;
+                }
+                
+                if (!password) {
+                    showNotification('请输入密码', 'error');
+                    return;
+                }
+                
+                // 创建密码对象
+                const passwordObj = {
+                    id: Date.now().toString(),
+                    platform: platform,
+                    username: username,
+                    password: password,
+                    notes: notes,
+                    createdAt: new Date().toISOString(),
+                    strength: evaluatePasswordStrength(password)
+                };
+                
+                // 添加到密码列表
+                passwords.push(passwordObj);
+                
+                // 保存密码
+                savePasswords();
+                
+                // 更新密码列表
+                updatePasswordsList();
+                
+                // 重置表单
+                storageForm.reset();
+                
+                // 显示通知
+                showNotification('密码已保存');
+            });
+            
+            // 搜索密码
+            searchPasswords.addEventListener('input', function() {
+                updatePasswordsList(this.value);
+            });
+            
+            // 清空所有密码
+            clearAll.addEventListener('click', function() {
+                if (confirm('确定要清空所有保存的密码吗？此操作不可撤销。')) {
+                    passwords = [];
+                    savePasswords();
+                    updatePasswordsList();
+                    showNotification('所有密码已清空');
+                }
+            });
+            
+            // 导出密码
+            exportPasswords.addEventListener('click', function() {
+                if (passwords.length === 0) {
+                    showNotification('没有可导出的密码', 'error');
+                    return;
+                }
+                
+                // 创建导出数据
+                const exportData = {
+                    exportDate: new Date().toISOString(),
+                    passwordCount: passwords.length,
+                    passwords: passwords
+                };
+                
+                // 转换为 JSON 字符串
+                const jsonString = JSON.stringify(exportData, null, 2);
+                
+                // 创建 Blob
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                
+                // 创建下载链接
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `passwords_export_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showNotification('密码已导出');
+            });
+            
+            // 导入密码
+            importPasswords.addEventListener('click', function() {
+                importFile.click();
+            });
+            
+            importFile.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        const importData = JSON.parse(event.target.result);
+                        
+                        // 验证导入数据
+                        if (!importData.passwords || !Array.isArray(importData.passwords)) {
+                            throw new Error('无效的导入文件');
+                        }
+                        
+                        // 合并密码
+                        const importedPasswords = importData.passwords.map(p => ({
+                            ...p,
+                            id: p.id || Date.now() + Math.random().toString(36).substr(2, 9)
+                        }));
+                        
+                        passwords = [...passwords, ...importedPasswords];
+                        
+                        // 保存密码
+                        savePasswords();
+                        
+                        // 更新密码列表
+                        updatePasswordsList();
+                        
+                        // 重置文件输入
+                        importFile.value = '';
+                        
+                        showNotification(`成功导入 ${importedPasswords.length} 个密码`);
+                    } catch (error) {
+                        showNotification('导入失败：无效的文件格式', 'error');
+                        importFile.value = '';
+                    }
+                };
+                reader.readAsText(file);
+            });
+        }
+
+        // 保存密码到本地存储
+        function savePasswords() {
+            localStorage.setItem('passwords', JSON.stringify(passwords));
+        }
+
+        // 从本地存储加载密码
+        function loadPasswords() {
+            const savedPasswords = localStorage.getItem('passwords');
+            if (savedPasswords) {
+                try {
+                    passwords = JSON.parse(savedPasswords);
+                    updatePasswordsList();
+                } catch (error) {
+                    console.error('加载密码失败:', error);
+                    passwords = [];
+                }
+            }
+        }
+
+        // 复制到剪贴板
+        function copyToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).catch(err => {
+                    // 降级方案
+                    fallbackCopyToClipboard(text);
+                });
+            } else {
+                fallbackCopyToClipboard(text);
+            }
+        }
+        
+        // 降级复制方案
+        function fallbackCopyToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+            } catch (err) {
+                console.error('复制失败:', err);
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // 更新密码列表
+        function updatePasswordsList(searchTerm = '') {
+            const passwordsList = document.getElementById('passwords-list');
+            passwordsList.innerHTML = '';
+            
+            // 过滤密码
+            let filteredPasswords = passwords;
+            if (searchTerm) {
+                const term = searchTerm.toLowerCase();
+                filteredPasswords = passwords.filter(p => 
+                    p.platform.toLowerCase().includes(term) || 
+                    p.username.toLowerCase().includes(term)
+                );
+            }
+            
+            // 显示密码列表
+            if (filteredPasswords.length === 0) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.className = 'text-center text-gray-500';
+                emptyRow.innerHTML = `<td colspan="5" class="px-6 py-10">${searchTerm ? '没有找到匹配的密码' : '暂无保存的密码'}</td>`;
+                passwordsList.appendChild(emptyRow);
+            } else {
+                filteredPasswords.forEach(password => {
+                    const row = document.createElement('tr');
+                    
+                    // 密码强度指示器
+                    const strengthLabels = ['弱', '较弱', '中等', '较强', '强', '非常强'];
+                    const strengthColors = ['text-red-500', 'text-orange-500', 'text-yellow-500', 'text-green-400', 'text-green-500', 'text-green-600'];
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="font-medium text-gray-900">${password.platform}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-gray-600 clickable-copy copy-username" data-value="${password.username}" data-id="${password.id}">${password.username}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center gap-2">
+                                <span class="text-gray-600 clickable-copy copy-password" data-value="${password.password}" data-id="${password.id}">
+                                    <span class="password-display" id="password-display-${password.id}">••••••••</span>
+                                </span>
+                                <button class="toggle-password-btn text-gray-400 hover:text-primary" data-id="${password.id}">
+                                    <i class="fa fa-eye-slash"></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-gray-600">${password.notes || '-'}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div class="flex items-center gap-3">
+                                <span class="${strengthColors[password.strength]}">${strengthLabels[password.strength]}</span>
+                                <button class="delete-password-btn text-gray-400 hover:text-danger" data-id="${password.id}">
+                                    <i class="fa fa-trash-o"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    
+                    passwordsList.appendChild(row);
+                });
+                
+                // 添加事件监听器
+                // 用户名/邮箱点击复制
+                document.querySelectorAll('.copy-username').forEach(element => {
+                    element.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const value = this.getAttribute('data-value');
+                        copyToClipboard(value);
+                        showNotification('用户名/邮箱已复制到剪贴板');
+                    });
+                });
+                
+                // 密码点击复制
+                document.querySelectorAll('.copy-password').forEach(element => {
+                    element.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const value = this.getAttribute('data-value');
+                        copyToClipboard(value);
+                        showNotification('密码已复制到剪贴板');
+                    });
+                });
+                
+                // 切换密码显示/隐藏
+                document.querySelectorAll('.toggle-password-btn').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const id = this.getAttribute('data-id');
+                        const passwordDisplay = document.getElementById(`password-display-${id}`);
+                        const passwordElement = passwordDisplay.closest('.copy-password');
+                        const passwordValue = passwordElement.getAttribute('data-value');
+                        
+                        if (passwordDisplay.textContent === '••••••••') {
+                            passwordDisplay.textContent = passwordValue;
+                            this.innerHTML = '<i class="fa fa-eye"></i>';
+                        } else {
+                            passwordDisplay.textContent = '••••••••';
+                            this.innerHTML = '<i class="fa fa-eye-slash"></i>';
+                        }
+                    });
+                });
+                
+                // 删除密码
+                document.querySelectorAll('.delete-password-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = this.getAttribute('data-id');
+                        if (confirm('确定要删除这个密码吗？')) {
+                            passwords = passwords.filter(p => p.id !== id);
+                            savePasswords();
+                            updatePasswordsList(searchTerm);
+                            showNotification('密码已删除');
+                        }
+                    });
+                });
+            }
+        }
+
+        // 初始化密码检查器
+        function initPasswordChecker() {
+            const checkerForm = document.getElementById('checker-form');
+            const toggleCheckPassword = document.getElementById('toggle-check-password');
+            const checkPassword = document.getElementById('check-password');
+            const checkerResult = document.getElementById('checker-result');
+            const checkerEmpty = document.getElementById('checker-empty');
+            const goToStorage = document.getElementById('go-to-storage');
+            
+            // 切换密码可见性
+            toggleCheckPassword.addEventListener('click', function() {
+                const type = checkPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+                checkPassword.setAttribute('type', type);
+                this.innerHTML = type === 'password' ? '<i class="fa fa-eye-slash"></i>' : '<i class="fa fa-eye"></i>';
+            });
+            
+            // 检查密码表单提交
+            checkerForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const password = checkPassword.value;
+                
+                if (!password) {
+                    showNotification('请输入要评估的密码', 'error');
+                    return;
+                }
+                
+                // 显示结果
+                checkerEmpty.classList.add('hidden');
+                checkerResult.classList.remove('hidden');
+                
+                // 评估密码强度
+                const strength = evaluatePasswordStrength(password);
+                updateCheckerStrength(strength);
+                
+                // 分析密码复杂度
+                analyzePasswordComplexity(password);
+                
+                // 检查风险
+                checkPasswordRisks(password);
+                
+                // 提供改进建议
+                provideImprovementSuggestions(password, strength);
+                
+                // 更新图表
+                updateCheckerChart(strength);
+            });
+            
+            // 跳转到存储部分
+            goToStorage.addEventListener('click', function() {
+                showSection('password-storage');
+            });
+        }
+
+        // 更新检查器强度显示
+        function updateCheckerStrength(strength) {
+            const strengthBar = document.getElementById('checker-strength-bar');
+            const score = document.getElementById('checker-score');
+            const strengthText = document.getElementById('checker-strength-text');
+            
+            // 更新进度条
+            strengthBar.className = `h-3 rounded-full password-strength-${strength}`;
+            strengthBar.style.width = `${strength * 20}%`;
+            
+            // 更新分数
+            score.textContent = strength * 2;
+            
+            // 更新文本
+            const strengthLabels = ['弱', '较弱', '中等', '较强', '强', '非常强'];
+            strengthText.textContent = strengthLabels[strength];
+            
+            // 更新颜色
+            const strengthColors = ['text-red-500', 'text-orange-500', 'text-yellow-500', 'text-green-400', 'text-green-500', 'text-green-600'];
+            score.className = `text-lg font-bold min-w-[3rem] text-center ${strengthColors[strength]}`;
+            strengthText.className = `text-sm mt-1 text-center ${strengthColors[strength]}`;
+        }
+
+        // 分析密码复杂度
+        function analyzePasswordComplexity(password) {
+            const hasUppercase = document.getElementById('has-uppercase');
+            const hasLowercase = document.getElementById('has-lowercase');
+            const hasNumbers = document.getElementById('has-numbers');
+            const hasSymbols = document.getElementById('has-symbols');
+            
+            // 检查大写字母
+            if (/[A-Z]/.test(password)) {
+                hasUppercase.className = 'fa fa-check-circle text-success';
+            } else {
+                hasUppercase.className = 'fa fa-times-circle text-danger';
+            }
+            
+            // 检查小写字母
+            if (/[a-z]/.test(password)) {
+                hasLowercase.className = 'fa fa-check-circle text-success';
+            } else {
+                hasLowercase.className = 'fa fa-times-circle text-danger';
+            }
+            
+            // 检查数字
+            if (/[0-9]/.test(password)) {
+                hasNumbers.className = 'fa fa-check-circle text-success';
+            } else {
+                hasNumbers.className = 'fa fa-times-circle text-danger';
+            }
+            
+            // 检查特殊字符
+            if (/[^A-Za-z0-9]/.test(password)) {
+                hasSymbols.className = 'fa fa-check-circle text-success';
+            } else {
+                hasSymbols.className = 'fa fa-times-circle text-danger';
+            }
+        }
+
+        // 检查密码风险
+        function checkPasswordRisks(password) {
+            const riskList = document.getElementById('risk-list');
+            riskList.innerHTML = '';
+            
+            const risks = [];
+            
+            // 长度风险
+            if (password.length < 8) {
+                risks.push('密码长度过短，建议至少使用8个字符');
+            }
+            
+            // 常见密码风险
+            if (commonPasswords.includes(password.toLowerCase())) {
+                risks.push('这是一个常见密码，容易被破解');
+            }
+            
+            // 连续字符风险
+            if (/(\w)\1{2,}/.test(password)) {
+                risks.push('密码包含连续重复字符，降低了安全性');
+            }
+            
+            // 键盘序列风险
+            if (/123|abc|qwerty|asdf|zxcv/.test(password.toLowerCase())) {
+                risks.push('密码包含常见键盘序列，容易被猜测');
+            }
+            
+            // 字符多样性风险
+            let charTypes = 0;
+            if (/[A-Z]/.test(password)) charTypes++;
+            if (/[a-z]/.test(password)) charTypes++;
+            if (/[0-9]/.test(password)) charTypes++;
+            if (/[^A-Za-z0-9]/.test(password)) charTypes++;
+            
+            if (charTypes < 2) {
+                risks.push('密码字符类型过于单一，建议混合使用不同类型字符');
+            }
+            
+            // 显示风险
+            if (risks.length === 0) {
+                const noRiskItem = document.createElement('li');
+                noRiskItem.innerHTML = '<i class="fa fa-check-circle text-success mr-2"></i> 未发现明显风险';
+                riskList.appendChild(noRiskItem);
+            } else {
+                risks.forEach(risk => {
+                    const riskItem = document.createElement('li');
+                    riskItem.innerHTML = `<i class="fa fa-exclamation-circle text-danger mr-2"></i> ${risk}`;
+                    riskList.appendChild(riskItem);
+                });
+            }
+        }
+
+        // 提供改进建议
+        function provideImprovementSuggestions(password, strength) {
+            const suggestionList = document.getElementById('suggestion-list');
+            suggestionList.innerHTML = '';
+            
+            const suggestions = [];
+            
+            // 长度建议
+            if (password.length < 12) {
+                suggestions.push('增加密码长度至少12个字符');
+            }
+            
+            // 字符类型建议
+            if (!/[A-Z]/.test(password)) {
+                suggestions.push('添加大写字母以增加复杂度');
+            }
+            if (!/[a-z]/.test(password)) {
+                suggestions.push('添加小写字母以增加复杂度');
+            }
+            if (!/[0-9]/.test(password)) {
+                suggestions.push('添加数字以增加复杂度');
+            }
+            if (!/[^A-Za-z0-9]/.test(password)) {
+                suggestions.push('添加特殊字符（如!@#$%）以增加复杂度');
+            }
+            
+            // 避免常见模式建议
+            if (/123|abc|qwerty|asdf|zxcv/.test(password.toLowerCase())) {
+                suggestions.push('避免使用键盘序列或常见模式');
+            }
+            
+            // 使用密码生成器建议
+            if (strength < 4) {
+                suggestions.push('考虑使用密码生成器创建随机密码');
+            }
+            
+            // 显示建议
+            if (suggestions.length === 0) {
+                const noSuggestionItem = document.createElement('li');
+                noSuggestionItem.innerHTML = '<i class="fa fa-check-circle text-success mr-2"></i> 密码强度良好，无需改进';
+                suggestionList.appendChild(noSuggestionItem);
+            } else {
+                suggestions.forEach(suggestion => {
+                    const suggestionItem = document.createElement('li');
+                    suggestionItem.innerHTML = `<i class="fa fa-lightbulb-o text-warning mr-2"></i> ${suggestion}`;
+                    suggestionList.appendChild(suggestionItem);
+                });
+            }
+        }
+
+        // 更新检查器图表
+        function updateCheckerChart(strength) {
+            const ctx = document.getElementById('checker-chart').getContext('2d');
+            
+            // 销毁现有图表
+            if (window.checkerChart) {
+                window.checkerChart.destroy();
+            }
+            
+            // 创建新图表
+            window.checkerChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['长度', '大写字母', '小写字母', '数字', '特殊字符', '唯一性'],
+                    datasets: [{
+                        label: '密码强度',
+                        data: calculateRadarData(strength),
+                        backgroundColor: 'rgba(26, 86, 219, 0.2)',
+                        borderColor: 'rgba(26, 86, 219, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(26, 86, 219, 1)',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 10,
+                            ticks: {
+                                stepSize: 2
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        // 计算雷达图数据
+        function calculateRadarData(strength) {
+            // 根据强度生成模拟数据
+            const baseValue = strength * 2;
+            return [
+                baseValue,
+                Math.random() * 4 + baseValue - 2,
+                Math.random() * 4 + baseValue - 2,
+                Math.random() * 4 + baseValue - 2,
+                Math.random() * 4 + baseValue - 2,
+                Math.random() * 4 + baseValue - 2
+            ].map(v => Math.min(10, Math.max(0, v)));
+        }
+
+        // 初始化密码健康报告
+        function initPasswordHealth() {
+            // 健康报告在显示时更新
+        }
+
+        // 更新健康报告
+        function updateHealthReport() {
+            const healthEmpty = document.getElementById('health-empty');
+            const healthReport = document.getElementById('health-report');
+            
+            if (passwords.length === 0) {
+                healthEmpty.classList.remove('hidden');
+                healthReport.classList.add('hidden');
+            } else {
+                healthEmpty.classList.add('hidden');
+                healthReport.classList.remove('hidden');
+                
+                // 更新统计数据
+                document.getElementById('total-passwords').textContent = passwords.length;
+                
+                const strongPasswords = passwords.filter(p => p.strength >= 4).length;
+                document.getElementById('strong-passwords').textContent = strongPasswords;
+                
+                const weakPasswords = passwords.filter(p => p.strength <= 2).length;
+                document.getElementById('weak-passwords').textContent = weakPasswords;
+                
+                // 更新强度分布图表
+                updateStrengthChart();
+                
+                // 更新平台健康状况
+                updatePlatformHealth();
+                
+                // 更新安全建议
+                updateHealthSuggestions();
+            }
+        }
+
+        // 更新强度分布图表
+        function updateStrengthChart() {
+            const ctx = document.getElementById('strength-chart').getContext('2d');
+            
+            // 计算各强度级别的密码数量
+            const strengthCounts = [0, 0, 0, 0, 0, 0];
+            passwords.forEach(p => {
+                strengthCounts[p.strength]++;
+            });
+            
+            // 销毁现有图表
+            if (window.strengthChart) {
+                window.strengthChart.destroy();
+            }
+            
+            // 创建新图表
+            window.strengthChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['弱', '较弱', '中等', '较强', '强', '非常强'],
+                    datasets: [{
+                        label: '密码数量',
+                        data: strengthCounts,
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.7)',
+                            'rgba(249, 115, 22, 0.7)',
+                            'rgba(245, 158, 11, 0.7)',
+                            'rgba(16, 185, 129, 0.7)',
+                            'rgba(5, 150, 105, 0.7)',
+                            'rgba(6, 148, 92, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgb(220, 38, 38)',
+                            'rgb(234, 88, 12)',
+                            'rgb(217, 119, 6)',
+                            'rgb(5, 150, 105)',
+                            'rgb(6, 148, 92)',
+                            'rgb(6, 133, 84)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 更新平台健康状况
+        function updatePlatformHealth() {
+            const platformHealthList = document.getElementById('platform-health-list');
+            platformHealthList.innerHTML = '';
+            
+            // 按强度排序
+            const sortedPasswords = [...passwords].sort((a, b) => a.strength - b.strength);
+            
+            sortedPasswords.forEach(password => {
+                const row = document.createElement('tr');
+                
+                // 密码强度指示器
+                const strengthLabels = ['弱', '较弱', '中等', '较强', '强', '非常强'];
+                const strengthColors = ['text-red-500', 'text-orange-500', 'text-yellow-500', 'text-green-400', 'text-green-500', 'text-green-600'];
+                
+                // 建议
+                let suggestion = '';
+                if (password.strength <= 2) {
+                    suggestion = '建议更换';
+                } else if (password.strength === 3) {
+                    suggestion = '可以加强';
+                } else {
+                    suggestion = '良好';
+                }
+                
+                row.innerHTML = `
+                    <td class="px-4 py-2 whitespace-nowrap">
+                        <div class="font-medium text-gray-900">${password.platform}</div>
+                    </td>
+                    <td class="px-4 py-2 whitespace-nowrap">
+                        <span class="${strengthColors[password.strength]}">${strengthLabels[password.strength]}</span>
+                    </td>
+                    <td class="px-4 py-2 whitespace-nowrap">
+                        <span class="${password.strength <= 2 ? 'text-danger' : password.strength === 3 ? 'text-warning' : 'text-success'}">${suggestion}</span>
+                    </td>
+                `;
+                
+                platformHealthList.appendChild(row);
+            });
+        }
+
+        // 更新健康建议
+        function updateHealthSuggestions() {
+            const healthSuggestions = document.getElementById('health-suggestions');
+            healthSuggestions.innerHTML = '';
+            
+            const suggestions = [];
+            
+            // 弱密码建议
+            const weakPasswords = passwords.filter(p => p.strength <= 2);
+            if (weakPasswords.length > 0) {
+                suggestions.push(`您有 ${weakPasswords.length} 个弱密码，建议优先更换这些密码`);
+            }
+            
+            // 密码多样性建议
+            const platforms = new Set(passwords.map(p => p.platform.toLowerCase()));
+            if (platforms.size < passwords.length * 0.8) {
+                suggestions.push('检测到可能在多个平台使用相同密码，建议为每个重要平台使用不同密码');
+            }
+            
+            // 整体强度建议
+            const avgStrength = passwords.reduce((sum, p) => sum + p.strength, 0) / passwords.length;
+            if (avgStrength < 3.5) {
+                suggestions.push('整体密码强度偏低，建议使用密码生成器创建更强的密码');
+            }
+            
+            // 双因素认证建议
+            suggestions.push('考虑为重要账户启用双因素认证，提供额外的安全保障');
+            
+            // 密码管理器建议
+            if (passwords.length > 5) {
+                suggestions.push('您的密码数量较多，建议使用专业密码管理器进行管理');
+            }
+            
+            // 显示建议
+            suggestions.forEach(suggestion => {
+                const suggestionItem = document.createElement('li');
+                suggestionItem.innerHTML = `<i class="fa fa-lightbulb-o text-warning mr-2"></i> ${suggestion}`;
+                healthSuggestions.appendChild(suggestionItem);
+            });
+        }
+
+        // 初始化通知
+        function initNotification() {
+            const notification = document.getElementById('notification');
+            const closeNotification = document.getElementById('close-notification');
+            
+            closeNotification.addEventListener('click', function() {
+                hideNotification();
+            });
+            
+            // 自动隐藏通知
+            notification.addEventListener('animationend', function() {
+                if (notification.classList.contains('show')) {
+                    setTimeout(hideNotification, 3000);
+                }
+            });
+        }
+
+        // 显示通知
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const notificationMessage = document.getElementById('notification-message');
+            const notificationIcon = document.getElementById('notification-icon');
+            
+            // 设置消息
+            notificationMessage.textContent = message;
+            
+            // 设置图标
+            if (type === 'success') {
+                notificationIcon.className = 'fa fa-check-circle text-success text-xl';
+            } else if (type === 'error') {
+                notificationIcon.className = 'fa fa-exclamation-circle text-danger text-xl';
+            } else if (type === 'warning') {
+                notificationIcon.className = 'fa fa-exclamation-triangle text-warning text-xl';
+            }
+            
+            // 显示通知
+            notification.classList.remove('translate-y-full', 'opacity-0');
+            notification.classList.add('translate-y-0', 'opacity-100', 'show');
+        }
+
+        // 隐藏通知
+        function hideNotification() {
+            const notification = document.getElementById('notification');
+            notification.classList.remove('translate-y-0', 'opacity-100', 'show');
+            notification.classList.add('translate-y-full', 'opacity-0');
+        }
+
+        // 更新安全提示
+        function updateSecurityTip() {
+            const securityTip = document.getElementById('security-tip');
+            const securityTipContent = document.getElementById('security-tip-content');
+            
+            // 随机选择安全提示
+            const randomTip = securityTips[Math.floor(Math.random() * securityTips.length)];
+            securityTip.querySelector('p').textContent = randomTip;
+            
+            // 随机选择安全知识
+            const randomKnowledge = securityKnowledge[Math.floor(Math.random() * securityKnowledge.length)];
+            securityTipContent.textContent = randomKnowledge;
+            
+            // 每30秒更新一次提示
+            setInterval(() => {
+                const randomTip = securityTips[Math.floor(Math.random() * securityTips.length)];
+                securityTip.querySelector('p').textContent = randomTip;
+                
+                const randomKnowledge = securityKnowledge[Math.floor(Math.random() * securityKnowledge.length)];
+                securityTipContent.textContent = randomKnowledge;
+            }, 30000);
+        }
+    </script>
+</body>
 </html>
